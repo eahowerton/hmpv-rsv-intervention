@@ -12,3 +12,4 @@ The code in this repository can be used to reproduce analysis from Howerton *et 
   * `\1_fit_models` STAN files and R scripts to fit SEIRS and SIRS models to Scotland data
   * `\2_run_simulations` scripts to run simulations based on model fits
   * `\3_figures` scripts to generate all main text and supplemental figures
+  * `\4_model_sensitivity` scripts necessary to run analyses and generate figures associated with model extensions (age structure and forcing with lagged RSV incidence)
