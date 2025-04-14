@@ -82,14 +82,14 @@ colnames(ind_mpv_pars) <- c("S0_mpv", "E0_mpv", "I0_mpv", "rho_mpv", "beta_mpv",
 
 
 fit_scotland_SIRS_long = as.data.frame(fit_scotland_SIRS) %>% 
-  mutate(beta_rsv = b, beta_mpv = b*r)
+  mutate(beta_rsv = b, beta_mpv = b*r, c_prime = c/max_RSV_inc*scotland_N)
 fit_scotland_SEIRS_long = as.data.frame(fit_scotland_SEIRS) %>% 
-  mutate(beta_rsv = b, beta_mpv = b*r)
+  mutate(beta_rsv = b, beta_mpv = b*r, c_prime = c/max_RSV_inc*scotland_N)
 
-pars = c("beta_rsv", "beta_mpv", "p", "a", "r", "c", "rho_rsv", "rho_mpv", "S0_rsv", "I0_rsv", "S0_mpv", "I0_mpv", "E0_rsv", "E0_mpv")
+pars = c("beta_rsv", "beta_mpv", "p", "a", "r", "c_prime", "rho_rsv", "rho_mpv", "S0_rsv", "I0_rsv", "S0_mpv", "I0_mpv", "E0_rsv", "E0_mpv")
 
 par_labs = c("RSV transmission rate", "HMPV transmission rate", "seasonal phase", "seasonal amplitude", "HMPV relative transmissibility", 
-             "effect of RSV on HMPV transmission", "RSV reporting rate", "HMPV reporting rate", "RSV initial susceptible", "RSV initial infected", "HMPV initial susceptible", "HMPV initial infected", "RSV initial exposed", "HMPV initial exposed")
+             "per-capita effect of\nRSV on HMPV transmission", "RSV reporting rate", "HMPV reporting rate", "RSV initial susceptible", "RSV initial infected", "HMPV initial susceptible", "HMPV initial infected", "RSV initial exposed", "HMPV initial exposed")
 names(par_labs) = pars
 
 bind_rows(
@@ -106,7 +106,7 @@ bind_rows(
   dcast(parameter + model ~ quantile) %>%
   mutate(parameter = factor(parameter, levels = c("beta_rsv", "rho_rsv", "S0_rsv", "E0_rsv", "I0_rsv",
                                                   "beta_mpv", "rho_mpv", "S0_mpv", "E0_mpv", "I0_mpv",
-                                                  "a", "p",  "r", "c")), 
+                                                  "a", "p",  "r", "c_prime")), 
          model = factor(model, levels = c("SEIRS-both", "SIRS-both", "SEIRS-RSV", "SEIRS-HMPV"))) %>%
   filter(!is.na(Q50)) %>%
   ggplot() + 
