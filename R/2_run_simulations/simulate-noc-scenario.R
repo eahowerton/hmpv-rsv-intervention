@@ -1,5 +1,7 @@
 library(dplyr)
 library(reshape2)
+library(ggplot2)
+library(cowplot)
 
 #### SETUP PARAMETERS ----------------------------------------------------------
 # load simulation functions
@@ -50,6 +52,9 @@ bifur_sims_noc = SEIRS_force_discrete_both(
   testing_scalar_rsv = rep(1, n_wks),
   rsvscaling_cuttoff = (end_wk_pre - start_wk_pre)/7 + 1)
 
+t_to_wk_scotland_bifur <- data.frame(wk_collected = as.Date(start_wk_pre + (0:n_wks)*7),
+                                     t = 1:(n_wks+1))
+
 diff_sims <- left_join(bifur_sims %>% filter(pathogen == "mpv", variable == "Ipred") %>% rename(fit = value), 
                        bifur_sims_noc %>% filter(pathogen == "mpv", variable == "Ipred") %>% 
                          rename(vacc = value)) %>%
@@ -84,3 +89,53 @@ diff_sims %>%
     .by = c("variable")
   )
 
+#### PLOT PROBABILITY OF DOUBLING ----------------------------------------------
+sims_summary <- bifur_sims %>% 
+  filter(variable == "Ipred", t > 52*11, pathogen == "mpv") %>%
+  summarize(cum_inc = sum(value), 
+            peak_inc = max(value), .by = c("draw_id", "pathogen"))
+
+sims_noint_summary <- bifur_sims_noc %>% 
+  filter(variable == "Ipred", t > 52*11, pathogen == "mpv") %>%
+  summarize(cum_inc_noint = sum(value), 
+            peak_inc_noint = max(value), .by = c("draw_id", "pathogen"))
+
+
+summ <- left_join(sims_summary, sims_noint_summary) %>% 
+  mutate(cum_abs_change = (cum_inc_noint - cum_inc), 
+         cum_rel_change = (cum_inc_noint - cum_inc)/cum_inc, 
+         peak_abs_change = (peak_inc_noint - peak_inc), 
+         peak_rel_change = (peak_inc_noint - peak_inc)/peak_inc, 
+  )
+  
+reference = bifur_sims %>%
+  filter(variable == "Ipred", t > 52*11) %>% 
+  summarize(cum_inc = sum(value), 
+            peak_inc = max(value), .by = c("draw_id", "pathogen")) %>%
+  reshape2::melt(c("draw_id", "pathogen")) %>%
+  reshape2::dcast(draw_id + variable ~ pathogen) %>% 
+  mutate(pct_change = (rsv-mpv)/mpv) %>% 
+  summarize(mean = mean(pct_change), .by = c("variable"))
+
+
+
+p1 = data.frame(pct_increase = seq(0,2, length.out = 50), 
+                probability = sapply(seq(0,2, length.out = 50), function(i){nrow(summ %>% filter(peak_rel_change > i))/nrow(summ)})) %>% 
+  ggplot(aes(x = pct_increase, y = probability)) + 
+  geom_line() +
+  scale_x_continuous(labels = scales::percent, name = "% increase in annual hMPV peak magnitude") + 
+  scale_y_continuous(name = "poseterior probability") +
+  theme_bw() + 
+  theme(panel.grid.minor = element_blank())
+
+p2 = data.frame(pct_increase = seq(0,0.03,length.out = 50), 
+                probability = sapply(seq(0,0.03,length.out = 50), function(i){nrow(summ %>% filter(cum_rel_change > i))/nrow(summ)})) %>% 
+  ggplot(aes(x = pct_increase, y = probability)) + 
+  geom_line() +
+  scale_x_continuous(labels = scales::percent, name = "% increase in annual hMPV burden") + 
+  scale_y_continuous(name = "poseterior probability") +
+  theme_bw() + 
+  theme(panel.grid.minor = element_blank())
+
+plot_grid(p2, p1, nrow = 1, labels = LETTERS[1:2])
+ggsave("figures/probability_of_hmpv_change.pdf", width = 8, height = 3)  
