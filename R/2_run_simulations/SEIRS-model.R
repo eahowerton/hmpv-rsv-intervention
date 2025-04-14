@@ -22,7 +22,7 @@ SEIRS_force_discrete <- function(N, parms, pop, npi = 1, rsvforce = 1, testing_s
     E[1,] = parms[,"E0"] * pop
     I[1,] = parms[,"I0"] * pop
     R[1,] = (1 - parms[,"S0"] - parms[,"E0"] - parms[,"I0"]) * pop
-    Ipred[1,] = parms[,"I0"] * pop * parms[,"rho"]
+    Ipred[1,] = parms[,"I0"] * pop * parms[,"rho"] * testing_scalar[1] 
     for (i in 2:N) {
       beta[i,] = npi[i]*parms[,"b"]*parms[,"r"]*(1 + parms[,"c"]*rsvforce[i,])*(parms[,"a"]*cos(2*pi*((i-40)/52 - parms[,"p"])) + 1)
       foi = beta[i,]*I[i-1,]/pop 
@@ -70,7 +70,7 @@ SEIRS_force_discrete <- function(N, parms, pop, npi = 1, rsvforce = 1, testing_s
 #' @param testing_scalar_mpv vector of testing scalars for HMPV (between 0 and 1)
 #' @param npi vector of NPI forcing; 1 if no NPI forcing
 #' @param rsvscaling_cutoff integer representing t before which RSV incidence should
-#'        be scaled as forcing for HMPV tranmsission; if NA, use all RSV incidence
+#'        be scaled as forcing for HMPV transmission; if NA, use all RSV incidence
 SEIRS_force_discrete_both = function(N, parms_rsv, parms_mpv, pop, 
                                      testing_scalar_rsv, testing_scalar_mpv,
                                      npi = 1, rsvscaling_cuttoff = NA){
@@ -100,4 +100,3 @@ SEIRS_force_discrete_both = function(N, parms_rsv, parms_mpv, pop,
     )
   )
 }
-

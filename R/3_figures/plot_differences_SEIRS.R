@@ -4,6 +4,7 @@ library(gridExtra)
 library(readr)
 library(tidyr)
 library(scales)
+library(reshape2)
 
 source("R/scotland_parameters.R")
 
@@ -11,7 +12,12 @@ bifur_points <- readRDS("data/derived_data/scotland/bifur-points_scotland_SEIRS.
 bifur_sims <- readRDS("data/derived_data/scotland/bifur-sims_scotland_SEIRS.rds")
 
 fit_scotland_SEIRS <- readRDS("data/derived_data/scotland/fit_scotland_SEIRS.rds")
-fitted_pars = apply(as.array(fit_scotland_SEIRS)[,,1:14], 3, median)
+
+fitted_pars = as.array(fit_scotland_SEIRS)[,,c("S0_mpv", "E0_mpv","I0_mpv","S0_rsv",
+                                               "E0_rsv","I0_rsv","rho_mpv","rho_rsv",
+                                               "b","r","c","a","p","max_RSV_inc")]
+
+fitted_pars = c(unlist(apply(fitted_pars, 3, median)), c_prime = median(fitted_pars[,,"c"]/fitted_pars[,,"max_RSV_inc"]))
 
 c_slices = sort(c(0, fitted_pars["c"]*0.9, fitted_pars["c"], fitted_pars["c"]*1.1))
 a_range = sort(c(seq(0.01, 0.99, 0.001), fitted_pars["a"]))
@@ -22,24 +28,24 @@ t_to_wk_scotland_bifur <- data.frame(wk_collected = as.Date(start_wk_pre + (0:nr
 # calculate the change in vaccination for different levels of a
 diff_df <- bind_rows(
   bifur_sims[[which(c_slices == fitted_pars["c"])]], 
-  .id = "draw_id") %>%
+  .id = "arange_id") %>%
   mutate(c = fitted_pars["c"]) %>%
   bind_rows(
     bind_rows(
       bifur_sims[[which(c_slices == 0)]], 
-      .id = "draw_id") %>%
+      .id = "arange_id") %>%
       mutate(c = 0)) %>%
   bind_rows(
     bind_rows(
       bifur_sims[[which(c_slices == fitted_pars["c"]*0.9)]], 
-      .id = "draw_id") %>%
+      .id = "arange_id") %>%
       mutate(c = fitted_pars["c"]*0.9)) %>%
   bind_rows(
     bind_rows(
       bifur_sims[[which(c_slices == fitted_pars["c"]*1.1)]], 
-      .id = "draw_id") %>%
+      .id = "arange_id") %>%
       mutate(c = fitted_pars["c"]*1.1)) %>%
-  mutate(a = a_range[as.integer(draw_id)]) %>%
+  mutate(a = a_range[as.integer(arange_id)]) %>%
   filter(pathogen == "mpv", variable == "Ipred") %>%
   select(t, a, c, value) %>% 
   mutate(c = ifelse(c == 0, "vacc", paste0("fit", round(c,2)))) %>%
@@ -86,11 +92,12 @@ p1 = diff_df %>%
   mutate(cfit = ifelse(variable %in% c("cum_vacc", "max_vacc", "max_vacc_wk"), "c=0 (vaccination)", cfit),
          variable = ifelse(variable %in% c("max_fit_wk", "max_vacc_wk"), "max_wk", substr(variable,1,3))) %>%
   ggplot(aes(x = a)) + 
-  geom_vline(xintercept = fitted_pars_mpv["a"], linetype = "dashed") + 
+  geom_vline(xintercept = fitted_pars["a"], linetype = "dashed") + 
   geom_line(aes(y = mn, color = cfit), linewidth = 0.8) + 
   facet_wrap(vars(variable), labeller = labeller(variable = labs_abs), scales = "free", ncol = 1) + 
   labs(x = "amplitude of seasonal forcing") + 
-  scale_color_manual(values = c(RColorBrewer::brewer.pal(3, "Set1"),"black")) +
+  scale_color_manual(values = c(RColorBrewer::brewer.pal(3, "Set1"),"black"), 
+                     labels = c("90% of interaction", "fitted interaction", "110% of interaction", "no interaction")) +
   scale_x_continuous(expand = c(0,0)) +
   theme_bw() + 
   theme(axis.title.y = element_blank(), 
@@ -106,7 +113,7 @@ p2 = diff_df %>%
   mutate(cfit = ifelse(c == round(fitted_pars["c"],2), paste(cfit, "(fitted)"), cfit)) %>%
   filter(variable %in% c("cum_diff", "max_diff", "max_wk_diff")) %>%
   ggplot(aes(x = a)) + 
-  geom_vline(xintercept = fitted_pars_mpv["a"], linetype = "dashed") + 
+  geom_vline(xintercept = fitted_pars["a"], linetype = "dashed") + 
   geom_line(aes(y = mn, color = cfit), linewidth = 0.8) + 
   facet_wrap(vars(variable), labeller = labeller(variable = labs_diffs), scales = "free", ncol = 1) + 
   labs(x = "amplitude of seasonal forcing") + 
@@ -118,7 +125,7 @@ p2 = diff_df %>%
         legend.title = element_blank(), 
         strip.background = element_blank())
 
-l <- cowplot::get_plot_component(p2, 'guide-box-bottom', return_all = TRUE)
+l <- cowplot::get_plot_component(p1, 'guide-box-bottom', return_all = TRUE)
 
 plot_grid(
   plot_grid(p1 + theme(legend.position = "none"), 
