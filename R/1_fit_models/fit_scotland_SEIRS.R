@@ -33,6 +33,15 @@ initfun = function(...){
   )
 }
 
+# don't save every variable
+pars_to_exclude = c("Sout_rsv", "Eout_rsv", "Iout_rsv", "Rout_rsv", 
+                    "Sdeath_rsv", "Edeath_rsv", "Ideath_rsv", "Rdeath_rsv", 
+                    "S_rsv", "E_rsv", "I_rsv", "R_rsv", "beta_rsv", "foi_rsv", #"Ipred_rsv",
+                    "Sout_mpv", "Eout_mpv", "Iout_mpv", "Rout_mpv", 
+                    "Sdeath_mpv", "Edeath_mpv", "Ideath_mpv", "Rdeath_mpv", 
+                    "S_mpv", "E_mpv", "I_mpv", "R_mpv", "beta_mpv", "foi_mpv", #"Ipred_mpv", 
+                    "birth", "max_RSV")
+
 # run model
 fit_scotland_SEIRS <- sampling(
   model_SEIRS,
@@ -54,7 +63,9 @@ fit_scotland_SEIRS <- sampling(
   chain = 4, 
   init = initfun, 
   cores = 4,
-  control=list(max_treedepth = 12)
+  control=list(max_treedepth = 12),
+  include = FALSE,        # actually, this means 'exclude' the parameters listed below
+  pars = pars_to_exclude
 )
 
 mcmc_pairs(fit_scotland_SEIRS, pars = c("b", "r", "c", "a", "p")) 
@@ -73,6 +84,11 @@ initfun_ind = function(...){
     I0 = rbeta(1, 20, 80)
   )
 }
+
+pars_to_exclude_ind = c("Sout", "Eout", "Iout", "Rout", 
+  "Sdeath", "Edeath", "Ideath", "Rdeath", 
+  "S", "E", "I", "R", "Ipred", "beta", "foi",
+  "birth", "max")
 
 # run model
 fit_scotland_SEIRS_mpv <- sampling(
@@ -94,7 +110,9 @@ fit_scotland_SEIRS_mpv <- sampling(
   init = initfun_ind, 
   cores = 4,
   control=list(max_treedepth = 12, 
-               adapt_delta = 0.7)
+               adapt_delta = 0.7), 
+  include = FALSE,        # actually, this means 'exclude' the parameters listed below
+  pars = pars_to_exclude_ind
 )
 
 mcmc_pairs(fit_scotland_SEIRS_mpv, pars = c("b", "a", "p", "S0", "E0", "I0", "rho")) 
@@ -120,7 +138,9 @@ fit_scotland_SEIRS_rsv <- sampling(
   chain = 4, 
   init = initfun_ind, 
   cores = 4,
-  control=list(max_treedepth = 12)
+  control=list(max_treedepth = 12), 
+  include = FALSE,        # actually, this means 'exclude' the parameters listed below
+  pars = pars_to_exclude_ind
 )
 
 mcmc_pairs(fit_scotland_SEIRS_rsv, pars = c("b", "a", "p", "S0", "E0", "I0", "rho")) 

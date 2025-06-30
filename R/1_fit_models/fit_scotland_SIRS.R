@@ -21,6 +21,15 @@ scotland_by_wk_pre <- scotland_by_wk %>%
 #    observed RSV incidence by some factor c
 model_SIRS <- stan_model("R/1_fit_models/SIRS_coupled.stan")
 
+# don't save every variable
+pars_to_exclude = c("Sout_rsv", "Iout_rsv", "Rout_rsv", 
+                    "Sdeath_rsv", "Ideath_rsv", "Rdeath_rsv", 
+                    "S_rsv", "I_rsv", "R_rsv", "Ipred_rsv", "beta_rsv", "foi_rsv",
+                    "Sout_mpv", "Iout_mpv", "Rout_mpv", 
+                    "Sdeath_mpv", "Ideath_mpv", "Rdeath_mpv", 
+                    "S_mpv", "I_mpv", "R_mpv", "Ipred_mpv", "beta_mpv", "foi_mpv",
+                    "birth", "max_RSV")
+
 # constrain sampling of initial conditions to ensure S0 + E0 + I0 < 1
 initfun = function(...){
   list(
@@ -51,7 +60,9 @@ fit_scotland_SIRS <- sampling(
   chain = 4, 
   init = initfun, 
   cores = 4,
-  control = list(max_treedepth = 12)
+  control = list(max_treedepth = 12),
+  include = FALSE,        # actually, this means 'exclude' the parameters listed below
+  pars = pars_to_exclude
 )
 
 mcmc_pairs(fit_scotland_SIRS, pars = c("b", "r", "c", "a", "p")) 
