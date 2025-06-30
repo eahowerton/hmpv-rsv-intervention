@@ -2,8 +2,6 @@ data {
   int N;                         // number of weeks
   int cases_mpv[N];              // HMPV detections
   int cases_rsv[N];              // RSV detections
-  // real log_cases_mpv[N];              // log(HMPV detections + 1)
-  // real log_cases_rsv[N];              // log(RSV detections + 1)
   real tests_mpv[N];             // moving average of tests scaled [0,1] 
   real tests_rsv[N];             // moving average of tests scaled [0,1] 
   int pop;                       // population size
@@ -37,17 +35,16 @@ transformed parameters {
   vector<lower=0>[N] E_mpv;
   vector<lower=0>[N] I_mpv;
   vector<lower=0>[N] Ipred_mpv;
-  vector<lower=0>[N] Ipred_mpv_log;
   vector<lower=0>[N] R_mpv;
   vector<lower=0>[N] S_rsv;
   vector<lower=0>[N] E_rsv;
   vector<lower=0>[N] I_rsv;
   vector<lower=0>[N] Ipred_rsv;
-  vector<lower=0>[N] Ipred_rsv_log;
   vector<lower=0>[N] R_rsv;
   vector<lower=0>[N] beta_mpv;
   vector<lower=0>[N] beta_rsv;
   vector<lower=0>[N] rsv_force;
+  real<lower=0> max_RSV_inc;
   real<lower=0> foi_mpv;
   real<lower=0> foi_rsv;
   real<lower=0> Sdeath_mpv;
@@ -72,14 +69,12 @@ transformed parameters {
   E_mpv[1] = E0_mpv * pop;
   I_mpv[1] = I0_mpv * pop;
   Ipred_mpv[1] = I0_mpv * pop * rho_mpv * tests_mpv[1];
-  Ipred_mpv_log[1] = log(I0_mpv * pop * rho_mpv * tests_mpv[1] + 1.01);
   R_mpv[1] = (1-S0_mpv-E0_mpv-I0_mpv) * pop;
   
   S_rsv[1] = S0_rsv * pop;
   E_rsv[1] = E0_rsv * pop;
   I_rsv[1] = I0_rsv * pop;
   Ipred_rsv[1] = I0_rsv * pop * rho_rsv * tests_rsv[1];
-  Ipred_rsv_log[1] = log(I0_rsv * pop * rho_rsv * tests_rsv[1] + 1.01);
   R_rsv[1] = (1-S0_rsv-E0_rsv-I0_rsv) * pop;
   
   beta_rsv[1] = b;
@@ -107,10 +102,11 @@ transformed parameters {
     E_rsv[i] = E_rsv[i-1] + Sout_rsv - Eout_rsv - Edeath_rsv;
     I_rsv[i] = I_rsv[i-1] + Eout_rsv - Iout_rsv - Ideath_rsv;
     Ipred_rsv[i] = Eout_rsv * rho_rsv * tests_rsv[i]; // use incidence (Eout)
-    Ipred_rsv_log[i] = log(Ipred_rsv[i] + 1.01);
     R_rsv[i] = R_rsv[i-1] + Iout_rsv - Rout_rsv - Rdeath_rsv;
     
   }
+  
+  max_RSV_inc = max(I_rsv);
   
   for (i in 2:N) {
     if(k > 0){ 
@@ -125,9 +121,7 @@ transformed parameters {
       rsv_force[i] = I_rsv[i]; 
     }
     
-    // print(rsv_force[i]/pop);
-    
-    beta_mpv[i] = r * b * (1 + c * rsv_force[i]/pop) * (a * cos (2 * pi() * ((i - 40) / 52.0 - p) ) + 1); 
+    beta_mpv[i] = r * b * (1 + c * rsv_force[i]/(max_RSV_inc*k)) * (a * cos (2 * pi() * ((i - 40) / 52.0 - p) ) + 1); 
     foi_mpv = beta_mpv[i] * I_mpv[i-1]/pop;
     
     Sout_mpv = (1-exp(-foi_mpv - mu))*S_mpv[i-1]*(foi_mpv/(mu + foi_mpv));
@@ -144,32 +138,28 @@ transformed parameters {
     E_mpv[i] = E_mpv[i-1] + Sout_mpv - Eout_mpv - Edeath_mpv;
     I_mpv[i] = I_mpv[i-1] + Eout_mpv - Iout_mpv - Ideath_mpv;
     Ipred_mpv[i] = Eout_mpv * rho_mpv * tests_mpv[i]; // use incidence (Eout)
-    Ipred_mpv_log[i] = log(Ipred_mpv[i] + 1.01);
     R_mpv[i] = R_mpv[i-1] + Iout_mpv - Rout_mpv - Rdeath_mpv;
     
   }
 }
 
 model {
-  S0_mpv ~ beta(20, 80);
+  S0_mpv ~ beta(2, 98);
   E0_mpv ~ beta(2, 98);
   I0_mpv ~ beta(2, 98);
-  S0_rsv ~ beta(20, 80);
+  S0_rsv ~ beta(2, 98);
   E0_rsv ~ beta(2, 98);
   I0_rsv ~ beta(2, 98);
   rho_mpv ~ beta(1, 99);
   rho_rsv ~ beta(1, 99);
   b ~ normal(3, 1);
   r ~ normal(1, 0.2);
-  // r ~ normal(0.8, 0.2);
   a ~ normal(0.5, 0.1);
-  c ~ normal(0, 20);
+  c ~ normal(0, 0.2);
   p ~ normal(0.5, 0.1);
   phi_mpv ~ normal(0, 10);
   phi_rsv ~ normal(0, 10);
   
   cases_mpv ~ neg_binomial_2(Ipred_mpv, phi_mpv);
   cases_rsv ~ neg_binomial_2(Ipred_rsv, phi_rsv);
-  // log_cases_mpv ~ gamma(Ipred_mpv_log, phi_mpv);
-  // log_cases_rsv ~ gamma(Ipred_rsv_log, phi_rsv);
 }

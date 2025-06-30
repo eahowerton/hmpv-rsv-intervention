@@ -21,7 +21,7 @@ postpand_sim = vector("list", length(fits_to_include))
 for(z in 1:length(fits_to_include)){
   print(z)
   browser()
-  f <- paste0("data/derived_data/scotland/fit_scotland_SEIRS_NEW_lag",fits_to_include[z],".rds")
+  f <- paste0("data/derived_data/scotland/fit_scotland_SEIRS_lag",fits_to_include[z],".rds")
   fit <- read_rds(f)
   postpand_sim[[z]] = postpandemic_analysis(
     fit = fit, samp = 1:100, observations = scotland_by_wk_full,

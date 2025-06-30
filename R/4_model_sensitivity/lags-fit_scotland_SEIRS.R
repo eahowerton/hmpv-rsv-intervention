@@ -34,14 +34,23 @@ initfun = function(...){
   )
 }
 
+# don't save every variable
+pars_to_exclude = c("Sout_rsv", "Eout_rsv", "Iout_rsv", "Rout_rsv", 
+                    "Sdeath_rsv", "Edeath_rsv", "Ideath_rsv", "Rdeath_rsv", 
+                    "S_rsv", "E_rsv", "I_rsv", "Ipred_rsv", "R_rsv", "beta_rsv", "foi_rsv",
+                    "Sout_mpv", "Eout_mpv", "Iout_mpv", "Rout_mpv", 
+                    "Sdeath_mpv", "Edeath_mpv", "Ideath_mpv", "Rdeath_mpv", "rsv_force",
+                    "S_mpv", "E_mpv", "I_mpv", "Ipred_mpv", "R_mpv", "beta_mpv", "foi_mpv",
+                    "birth")
+
 k_tst = c(1:8)
 n_samp <- 5000
 samp <- sample(1:7500, n_samp)
 
 #### FIT MODEL -----------------------------------------------------------------
-model_SEIRS <- stan_model("R/1_fit_models/lags-SEIRS_RSVforce_RSVfit.stan")
+model_SEIRS <- stan_model("R/4_model-sensitivity/SEIRS_couled-lags.stan")
 
-# fit_scotland_SEIRS_all <- vector("list", length(k_tst))
+fit_scotland_SEIRS_all <- vector("list", length(k_tst))
 for(i in 1:length(k_tst)){
   print(k_tst[i])
   warning(paste0("iteration: ", i," (lag of ", k_tst[i], " weeks)"))
@@ -62,16 +71,18 @@ for(i in 1:length(k_tst)){
       k = k_tst[i]
     ),
     seed = 7, 
-    iter = 10000,
+    iter = 20000,
     chain = 4, 
     init = initfun, 
     cores = 4,
-    control=list(max_treedepth = 12)
+    control=list(max_treedepth = 12),
+    include = FALSE,        # actually, this means 'exclude' the parameters listed below
+    pars = pars_to_exclude
   )
-  saveRDS(fit_scotland_SEIRS_all[[i]], paste0("data/derived_data/scotland/fit_scotland_SEIRS_NEW_lag",k_tst[i],".rds"))
+  saveRDS(fit_scotland_SEIRS_all[[i]], paste0("data/derived_data/scotland/fit_scotland_SEIRS_lag",k_tst[i],".rds"))
 }  
 error <- names(warnings())
-out <- file(paste0("data/derived_data/scotland/", "warnings_NEW.txt"))
+out <- file(paste0("data/derived_data/scotland/", "warnings.txt"))
 writeLines(error, out)
 close(out)
 
@@ -79,41 +90,43 @@ close(out)
 fit_scotland_SEIRS_all = vector("list", length(k_tst))
 for(z in 1:length(k_tst)){
   print(z)
-  f <- paste0("data/derived_data/scotland/fit_scotland_SEIRS_NEW_lag",
+  f <- paste0("data/derived_data/scotland/fit_scotland_SEIRS_lag",
               k_tst[z],".rds")
   fit_scotland_SEIRS_all[[z]] <- read_rds(f)
 }
 
-
 #### PLOT FITS -----------------------------------------------------------------
-for(i in 1:length(k_tst)){
-  print(
-    bind_rows(
-      filter_posterior(as.data.frame(fit_scotland_SEIRS_all[[i]] ), "Ipred_mpv\\[") %>%
-        mutate(pathogen = "mpv"), 
-      filter_posterior(as.array(fit_scotland_SEIRS_all[[i]] ), "Ipred_rsv\\[") %>%
-        mutate(pathogen = "rsv")
-    ) %>%
-      left_join(t_to_wk_scotland) %>%
-      filter(draw_id %in% sample(1:n_samp,100)) %>%
-      mutate(pathogen = factor(pathogen, levels = c("rsv", "mpv"))) %>%
-      ggplot(aes(x = wk_collected, color = pathogen)) + 
-      geom_point(data = scotland_by_wk_pre, 
-                 aes(y = detections), shape = 21) + 
-      geom_line(data = scotland_by_wk_pre, 
-                aes(y = detections), alpha = 0.2) + 
-      geom_line(aes(y = value, group = draw_id), alpha = 0.2) +
-      ggtitle(paste0("lag = ", k_tst[i])) +
-      facet_grid(rows = vars(pathogen), scales = "free", switch = "y") + 
-      scale_color_brewer(palette = "Dark2") + 
-      theme_bw() + 
-      theme(axis.title.x = element_blank(), 
-            legend.position = "none", 
-            panel.grid.minor.y = element_blank(),
-            strip.background = element_blank(), 
-            strip.placement = "outside")
-  )
-}
+# note, this code will not work with the condensed posterior files that have been
+# saved; instead rerun without the include = FALSE, and pars = pars_to_exclude
+# arguments above, or simulate model fits
+# for(i in 1:length(k_tst)){
+#   print(
+  #   bind_rows(
+  #     filter_posterior(as.data.frame(fit_scotland_SEIRS_all[[i]] ), "Ipred_mpv\\[") %>%
+  #       mutate(pathogen = "mpv"),
+  #     filter_posterior(as.array(fit_scotland_SEIRS_all[[i]] ), "Ipred_rsv\\[") %>%
+  #       mutate(pathogen = "rsv")
+  #   ) %>%
+  #     left_join(t_to_wk_scotland) %>%
+  #     filter(draw_id %in% sample(1:n_samp,100)) %>%
+  #     mutate(pathogen = factor(pathogen, levels = c("rsv", "mpv"))) %>%
+  #     ggplot(aes(x = wk_collected, color = pathogen)) +
+  #     geom_point(data = scotland_by_wk_pre,
+  #                aes(y = detections), shape = 21) +
+  #     geom_line(data = scotland_by_wk_pre,
+  #               aes(y = detections), alpha = 0.2) +
+  #     geom_line(aes(y = value, group = draw_id), alpha = 0.2) +
+  #     ggtitle(paste0("lag = ", k_tst[i])) +
+  #     facet_grid(rows = vars(pathogen), scales = "free", switch = "y") +
+  #     scale_color_brewer(palette = "Dark2") +
+  #     theme_bw() +
+  #     theme(axis.title.x = element_blank(),
+  #           legend.position = "none",
+  #           panel.grid.minor.y = element_blank(),
+  #           strip.background = element_blank(),
+  #           strip.placement = "outside")
+  # )
+# }
 
 #### PLOT PARAMETER ESTIMATES --------------------------------------------------
 # parameter estimates across all lags
@@ -156,6 +169,7 @@ par_summary %>% filter(!(parameter %in% c("c", "max_RSV_inc"))) %>%
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor.x = element_blank(),
         strip.background = element_blank())
+
 ggsave("figures/lagged_param_estimates.pdf", width = 13, height = 9)
 
 # plot transmission rate
