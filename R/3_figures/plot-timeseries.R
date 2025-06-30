@@ -4,8 +4,10 @@ library(tidyr)
 library(ggplot2)
 library(cowplot)
 library(RColorBrewer)
+library(readr)
+library(reshape2)
 
-theme_set(theme_bw(base_size = 11))
+theme_set(theme_bw(base_size = 7))
 
 #### LOAD DATA AND SETUP -------------------------------------------------------
 scotland_by_wk <- read_rds("data/derived_data/scotland/scotland_by_wk_overall.rds")
@@ -95,12 +97,13 @@ lag_text <- max_corr %>%
   mutate(x = as.Date(ifelse(region == "Scotland", "2007-01-01", 
                             ifelse(region == "Korea", "2023-07-01", "2014-01-01"))), 
          y = Inf, 
-         txt = ifelse(region %in% biennial_regions, "biennial", 
+         txt = ifelse(region %in% biennial_regions, "", 
                       paste0("annual\n", -lag, " week lag")), 
          hjust = ifelse(region == "Korea", 1, 0)) %>%
   mutate(region = factor(region, levels = region_lvls))
 
-txt_size = 3
+txt_size = 2
+line_size = 0.4
 
 p1_scotland = data_all_locs %>%
   filter(detections > 0, 
@@ -108,7 +111,7 @@ p1_scotland = data_all_locs %>%
   mutate(region = factor(region, levels = region_lvls), 
          pathogen = factor(pathogen, levels = c("rsv", "mpv"))) %>%
   ggplot(aes(x = wk_collected, y = detections, color = pathogen)) + 
-  geom_line() + 
+  geom_line(size = line_size) + 
   geom_text(data = lag_text %>% filter(region %in% c("Scotland")),
             aes(x = x, y = y, label = txt, hjust = hjust), color = "black",  size = txt_size, vjust = 1) + 
   facet_wrap(vars(region), nrow = 1, scales = "free") +
@@ -129,7 +132,7 @@ p1_biennial = data_all_locs %>%
   mutate(region = factor(region, levels = region_lvls), 
          pathogen = factor(pathogen, levels = c("rsv", "mpv"))) %>%
   ggplot(aes(x = wk_collected, y = detections, color = pathogen)) + 
-  geom_line() + 
+  geom_line(size = line_size) + 
   geom_text(data = lag_text %>% filter(region %in% c("Atlantic Region, Canada", "Province of Ontario, Canada")),
             aes(x = x, y = y, label = txt, hjust = hjust), color = "black",  size = txt_size, vjust = 1) + 
   # geom_point(size = 0.6) + 
@@ -149,7 +152,7 @@ p1_rest <- data_all_locs %>%
   mutate(region = factor(region, levels = region_lvls), 
          pathogen = factor(pathogen, levels = c("rsv", "mpv"))) %>%
   ggplot(aes(x = wk_collected, y = detections, color = pathogen)) + 
-  geom_line() + 
+  geom_line(size = line_size) + 
   geom_text(data = lag_text %>% filter(!(region %in% c("Scotland", "Atlantic Region, Canada", "Province of Ontario, Canada"))),
             aes(x = x, y = y, label = txt, hjust = hjust), color = "black", size = txt_size, vjust = 1) + 
   facet_wrap(vars(region), nrow = 2, scales = "free") +
@@ -166,7 +169,7 @@ p1 = plot_grid(
   nrow = 1
 )
 
-ggsave("figures/all-timeseries.pdf", width = 10, height = 4)
+ggsave("figures/all-timeseries.pdf", width = 7, height = 2.5)
 
 
 #### PLOT TESTING TRENDS -------------------------------------------------------

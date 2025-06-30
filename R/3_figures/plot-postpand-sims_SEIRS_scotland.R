@@ -42,47 +42,47 @@ postpand_sims %>%
   mutate(facet_var = factor(paste(variable, pathogen, sep = "-"), levels = facet_var_lvls)) %>%
   # mutate(variable = factor(variable, levels = c("S", "I", "Ipred"))) %>%
   ggplot(aes(x = wk_collected, color = pathogen)) + 
-  geom_vline(xintercept = start_wk_post) +
+  geom_vline(xintercept = start_wk_post, size = 0.4) +
   geom_line(data = postpand_sims_ind %>% 
               left_join(t_to_wk_scotland_full) %>%
               filter(draw_id %in% plot_samps_ind, 
                      variable %in% c("Ipred"), 
                      wk_collected >= start_wk_post) %>%
               mutate(facet_var = factor(paste(variable, pathogen, sep = "-"), levels = facet_var_lvls)), 
-            aes(y = value, group = draw_id), alpha = 0.2, color = "gray30") +
-  geom_line(aes(y = value, group = draw_id), alpha = 0.2) +
+            aes(y = value, group = draw_id), alpha = 0.2, color = "gray30", size = 0.4) +
+  geom_line(aes(y = value, group = draw_id), alpha = 0.2, size = 0.4) +
   geom_point(data = scotland_by_wk %>%
                filter(wk_collected > start_wk_pre) %>%
                mutate(facet_var = paste("Ipred", pathogen, sep = "-")) %>%
                mutate(facet_var = factor(facet_var, levels = facet_var_lvls)),
-             aes(y = detections), shape = 21, fill = "white", alpha = 0.6, size = 0.9) +
+             aes(y = detections), shape = 21, fill = "white", alpha = 0.6, size = 0.72) +
   geom_line(data = df_plot_npis %>% 
               filter(npi_scalar == npi_scalar) %>%
               mutate(facet_var = factor("S-rsv", levels = facet_var_lvls), 
                      npi_plot = 3e6-4e5 + mean_mob*4e5),
-            aes(y = npi_plot), color = "darkgray") + 
+            aes(y = npi_plot), color = "darkgray", size = 0.4) + 
   geom_line(data = df_plot_npis %>% 
               filter(npi_scalar == npi_scalar) %>%
               mutate(facet_var = factor("S-mpv", levels = facet_var_lvls), 
                      npi_plot = 3e6-4e5 + mean_mob*4e5),
-            aes(y = npi_plot), color = "darkgray") + 
+            aes(y = npi_plot), color = "darkgray", size = 0.4) + 
   geom_text(data = data.frame(y = 3e6 + 2e5, 
                               x = as.Date(rep(c(mean(c(start_wk_pre, end_wk_pre)), 
                                     mean(c(start_wk_post, end_wk_post))),2), "%Y-%m-%d"), 
                               label = rep(c("fit pre-pandemic period", "simulate post-pandemic period"), 2), 
                               facet_var = factor(c("S-mpv", "S-mpv","S-rsv","S-rsv"), levels = facet_var_lvls)), 
-            aes(x = x, y = y, label = label), vjust = 1, color = "black", size = 2) + 
+            aes(x = x, y = y, label = label), vjust = 1, color = "black", size = 1.6) + 
   facet_wrap(vars(facet_var), labeller = labeller(facet_var = facet_var_labs), scales = "free", ncol = 2) + 
   scale_color_brewer(palette = "Dark2", direction = -1) + 
   scale_x_date(date_breaks = "2 years", 
                date_labels = "%Y", 
                expand = c(0,0)) +
   scale_y_continuous(labels = comma) + 
-  theme_bw() + 
+  theme_bw(base_size = 8.8) + 
   theme(axis.title = element_blank(), 
         legend.position = "none", 
         panel.grid.minor.y = element_blank(),
         strip.background = element_blank())
 
-ggsave("figures/full-timeseries_SEIRS_scotland.pdf", width = 10, height = 6)
+ggsave("figures/full-timeseries_SEIRS_scotland.pdf", width = 7.25, height = 4.2)
 

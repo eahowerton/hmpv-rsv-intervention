@@ -76,9 +76,9 @@ p1 = bind_rows(nll_all %>% mutate(period = "all"),
             .by = c("model", "period", "pathogen")) %>%
   mutate(y = -as.numeric(period) + ifelse(pathogen == "rsv", 0.1,-0.1) + ifelse(model == "coupled", 0.05, -0.05)) %>%
   ggplot(aes(color = pathogen)) + 
-  geom_segment(aes(x = Q5, xend = Q95, y = y, yend = y, group = model)) +
-  geom_segment(aes(x = Q25, xend = Q75, y = y, yend = y, group = model), linewidth = 1.2) + 
-  geom_point(aes(x = Q50, y = y, shape = model), size = 1.8) + 
+  geom_segment(aes(x = Q5, xend = Q95, y = y, yend = y, group = model), linewidth = 0.3) +
+  geom_segment(aes(x = Q25, xend = Q75, y = y, yend = y, group = model), linewidth = 0.75) + 
+  geom_point(aes(x = Q50, y = y, shape = model), size = 1.15) + 
   scale_color_brewer(palette = "Dark2", labels = c("RSV", "hMPV")) + 
   scale_shape_manual(labels = c("independent model", "coupled model"), 
                      values = c(3,16)) +
@@ -87,7 +87,7 @@ p1 = bind_rows(nll_all %>% mutate(period = "all"),
                      labels = c("full period\n(2018-2024)", 
                                 "pre-pandemic\n(2018-2020)", 
                                 "post-pandemic\n(2021-2024)")) +
-  theme_bw() + 
+  theme_bw(base_size = 7) + 
   theme(axis.title.y = element_blank(), 
         legend.position = "bottom",
         legend.title = element_blank(),
@@ -111,9 +111,9 @@ p2 = bind_rows(c_all %>% mutate(period = "all"),
             .by = c("model", "period", "pathogen")) %>%
   mutate(y = -as.numeric(period) + ifelse(pathogen == "rsv", 0.1,-0.1) + ifelse(model == "coupled", 0.05, -0.05)) %>%
   ggplot(aes(color = pathogen)) + 
-  geom_segment(aes(x = Q5, xend = Q95, y = y, yend = y)) +
-  geom_segment(aes(x = Q25, xend = Q75, y = y, yend = y), linewidth = 1.2) + 
-  geom_point(aes(x = Q50, y = y, shape = model), size = 1.8) + 
+  geom_segment(aes(x = Q5, xend = Q95, y = y, yend = y), linewidth = 0.3) +
+  geom_segment(aes(x = Q25, xend = Q75, y = y, yend = y), linewidth = 0.75) + 
+  geom_point(aes(x = Q50, y = y, shape = model), size = 1.15) + 
   scale_color_brewer(palette = "Dark2", labels = c("RSV", "hMPV")) + 
   scale_shape_manual(labels = c("independent model", "coupled model"), 
                        values = c(3,16)) +
@@ -122,7 +122,7 @@ p2 = bind_rows(c_all %>% mutate(period = "all"),
                      labels = c("full period\n(2018-2024)", 
                                 "pre-pandemic\n(2018-2020)", 
                                 "post-pandemic\n(2021-2024)")) +
-  theme_bw() + 
+  theme_bw(base_size = 7) + 
   theme(axis.title.y = element_blank(), 
         legend.position = "bottom",
         legend.title = element_blank(),
@@ -140,7 +140,7 @@ plot_grid(
   l, ncol = 1, rel_heights = c(0.9, 0.1)
 )
 
-ggsave("figures/model_comparison.pdf", width = 8, height = 3)
+ggsave("figures/model_comparison.pdf", width = 5, height = 2)
 
 
 

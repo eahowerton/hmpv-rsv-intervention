@@ -11,11 +11,13 @@ source("R/scotland_parameters.R")
 bifur_points <- read_rds("data/derived_data/scotland/bifur-points_scotland_SEIRS.rds")
 bifur_sims <- read_rds("data/derived_data/scotland/bifur-sims_scotland_SEIRS.rds")
 
+bifur_points <- bind_rows(bifur_points)
+
 fit_scotland_SEIRS <- read_rds("data/derived_data/scotland/fit_scotland_SEIRS.rds")
 fitted_pars = apply(as.array(fit_scotland_SEIRS)[,,1:14], 3, median)
 
-c_slices = sort(c(c_slices, fitted_pars["c"]))
-a_range = sort(c(a_range, fitted_pars["a"]))
+c_slices = bifur_points$c %>% unique()
+a_range = bifur_points$a %>% unique()
 
 a_ex = as.vector(sort(c(0.05, fitted_pars["a"], 0.8)))
 
@@ -31,33 +33,35 @@ find_seasonality <- function(pts, thrsh = 0.0001){
 
  ### PLOT BIFURCATION FOR I ----------------------------------------------------
 
-seas = bind_rows(bifur_points) %>%
+seas = bifur_points %>%
   filter(variable == "I") %>%
   filter(c == fitted_pars["c"]) %>%
-  summarize(seas = find_seasonality(value/scotland_N, thrsh = 0.0005), .by = c("a", "pathogen", "draw_id")) %>%
+  summarize(seas = find_seasonality(value/scotland_N, thrsh = 0.0005), .by = c("a", "pathogen")) %>%
   mutate(seas = factor(seas, levels = c("annual", "biennial", "3-year +")))
 
-rsv_region_yval = max(bind_rows(bifur_points) %>% filter(c == 0) %>% 
+rsv_region_yval = max(bifur_points %>% filter(c == 0) %>% 
                         filter(variable == "I", pathogen == "rsv") %>% 
                         pull(value))/scotland_N+0.01
-mpv_region_yval = max(bind_rows(bifur_points) %>% filter(c == fitted_pars["c"]) %>% 
+mpv_region_yval = max(bifur_points %>% filter(c == fitted_pars["c"]) %>% 
                         filter(variable == "I", pathogen == "mpv") %>% 
                         pull(value))/scotland_N+0.01
 
+point_size = 0.2
+
 # plot bifurcation for RSV
-p1 = bind_rows(bifur_points) %>%
+p1 = bifur_points %>%
   filter(variable == "I", pathogen == "rsv") %>%
   filter(c == 0) %>%
   ggplot(aes(x = a, y = value/scotland_N)) + 
-  geom_point() + 
-  geom_vline(xintercept = a_ex, linetype = "dotted", size = 0.8) + 
+  geom_point(size = point_size) + 
+  geom_vline(xintercept = a_ex, linetype = "dotted", size = 0.3) + 
   geom_point(data = seas %>% filter(pathogen == "rsv") %>% mutate(y = rsv_region_yval),
-             aes(x = a, y = y, color = as.factor(seas)), size = 8, shape = "|") +
+             aes(x = a, y = y, color = as.factor(seas)), size = 4, shape = "|") +
   labs(x = "amplitude of seasonal forcing", y = "RSV prevalence") + 
   scale_color_brewer(palette = "Purples", direction = -1) + 
   scale_x_continuous(expand = c(0,0)) + 
   scale_y_continuous(expand = c(0,0)) + 
-  theme_bw() + 
+  theme_bw(base_size = 7) + 
   theme(legend.position = "none", 
         panel.grid.minor = element_blank(),
         panel.grid.major.x = element_blank())
@@ -69,24 +73,24 @@ p2 = bind_rows(bifur_points) %>%
   mutate(c_name = factor(ifelse(c == 0, c_names[1], c_names[2]), levels = c_names)) %>%
   arrange(c_name) %>%
   ggplot(aes(x = a, y = value/scotland_N)) + 
-  geom_point(aes(color = c_names[1])) +
+  geom_point(aes(color = c_names[1]), size = point_size) +
   geom_point(data = bind_rows(bifur_points) %>%
                filter(variable == "I", pathogen == "mpv") %>%
                select(a, c, t, value) %>%
                melt(c("a", "c", "t")) %>%
                filter(c == fitted_pars["c"]) %>%
                mutate(c_name = factor(ifelse(c == 0, c_names[1], c_names[2]), levels = c_names)) %>%
-               arrange(c_name), aes(color = c_names[2])) +
-  geom_vline(xintercept = a_ex, linetype = "dotted", size = 0.8) + 
+               arrange(c_name), aes(color = c_names[2]), size = point_size) +
+  geom_vline(xintercept = a_ex, linetype = "dotted", size = 0.3) + 
   geom_point(data = seas %>% filter(pathogen == "mpv") %>% mutate(y = mpv_region_yval),
-             aes(x = a, y = y, color = as.factor(seas)), size = 8, shape = "|") +
+             aes(x = a, y = y, color = as.factor(seas)), size = 4, shape = "|") +
   guides(color=guide_legend(nrow = 1)) + 
   labs(x = "amplitude of seasonal forcing", 
        y = "HMPV prevalence") + 
   scale_color_manual(values = c(rev(RColorBrewer::brewer.pal(3, "Purples")),"black", "gray"))+
   scale_x_continuous(expand = c(0,0)) + 
   scale_y_continuous(expand = c(0,0)) + 
-  theme_bw() + 
+  theme_bw(base_size = 7) + 
   theme(legend.position = "bottom", 
         legend.title = element_blank(), 
         panel.grid.minor = element_blank(),
@@ -115,7 +119,7 @@ aexplts_I <- bind_rows(
   filter(year(wk_collected) >= 2036, year(wk_collected) < 2046) %>%
   mutate(c_name = ifelse(c == 0, "c = 0 (vaccination)", paste("c =", round(c,2), "(fitted)"))) %>%
   ggplot(aes(x = wk_collected, y = value, color = pathogen)) + 
-  geom_line(aes(linetype = c_name)) + 
+  geom_line(aes(linetype = c_name), linewidth = 0.3) + 
   facet_wrap(vars(a), labeller = labeller(a = a_labs), ncol = 1, scales = "free") + 
   scale_color_brewer(palette = "Dark2", 
                      direction = -1,
@@ -123,11 +127,11 @@ aexplts_I <- bind_rows(
                      name = "pathogen") + 
   scale_linetype_manual(values = c("solid", "dashed"), 
                         name = "cross protection scenario") + 
-  scale_x_date(date_breaks = "year") +
+  scale_x_date(date_breaks = "year", name = "time (years)") +
   scale_y_continuous(labels = comma, name = "detections") + 
-  theme_bw() + 
+  theme_bw(base_size = 7) + 
   theme(axis.text.x = element_blank(), 
-        axis.title.x = element_blank(),
+        # axis.title.x = element_blank(),
         legend.position = "bottom",
         legend.title = element_blank(),
         panel.grid.minor = element_blank(), 
@@ -141,4 +145,5 @@ plot_grid(
             l, rel_heights = c(0.45, 0.45, 0.1), ncol = 1, labels = c("A", "B")), 
   aexplts_I, labels = c(NA, "C"))
 
-ggsave("figures/bifurcation_SEIRS_scotland.pdf", width = 14, height = 8)
+ggsave("figures/bifurcation_SEIRS_scotland.pdf", width = 7, height = 4)
+
