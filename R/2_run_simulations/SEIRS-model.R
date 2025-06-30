@@ -25,6 +25,7 @@ SEIRS_force_discrete <- function(N, parms, pop, npi = 1, rsvforce = 1, testing_s
     Ipred[1,] = parms[,"I0"] * pop * parms[,"rho"] * testing_scalar[1] 
     for (i in 2:N) {
       beta[i,] = npi[i]*parms[,"b"]*parms[,"r"]*(1 + parms[,"c"]*rsvforce[i,])*(parms[,"a"]*cos(2*pi*((i-40)/52 - parms[,"p"])) + 1)
+      beta[i, which(beta[i,]<0)] = 0
       foi = beta[i,]*I[i-1,]/pop 
       # S transitions
       Soutall = (1 - exp(-foi - parms[,"mu"]))*S[i-1,] 
@@ -93,6 +94,36 @@ SEIRS_force_discrete_both = function(N, parms_rsv, parms_mpv, pop,
   rsv_force_sim = t(t(rsv_I)/rsv_max)
   mpv_sim = SEIRS_force_discrete(N = N, parms = parms_mpv, pop = pop, 
                                  npi = npi, rsvforce = rsv_force_sim, testing_scalar = testing_scalar_mpv)
+  return(
+    bind_rows(
+      rsv_sim %>% mutate(pathogen = "rsv"), 
+      mpv_sim %>% mutate(pathogen = "mpv"), 
+    )
+  )
+}
+
+SEIRS_force_discrete_both_sepnpi = function(N, parms_rsv, parms_mpv, pop, 
+                                     testing_scalar_rsv, testing_scalar_mpv,
+                                     npi_rsv = 1, npi_mpv = 1, rsvscaling_cuttoff = NA){
+  rsv_sim = SEIRS_force_discrete(N = N, parms = parms_rsv, pop = pop, 
+                                 npi = npi_rsv, rsvforce = 1, testing_scalar = testing_scalar_rsv)
+  rsv_I = as.matrix(
+    rsv_sim %>% 
+      filter(variable == "I") %>%
+      dcast(t ~ draw_id, value.var = "value") %>%
+      select(-t)
+  )
+  if(is.na(rsvscaling_cuttoff)){
+    if(ncol(rsv_I) == 1){rsv_max = max(rsv_I)}
+    else{rsv_max = apply(rsv_I, 2, max)}
+  }
+  else{
+    if(ncol(rsv_I) == 1){rsv_max = max(rsv_I)}
+    else{rsv_max = apply(rsv_I[1:rsvscaling_cuttoff, ], 2, max)}
+  }
+  rsv_force_sim = t(t(rsv_I)/rsv_max)
+  mpv_sim = SEIRS_force_discrete(N = N, parms = parms_mpv, pop = pop, 
+                                 npi = npi_mpv, rsvforce = rsv_force_sim, testing_scalar = testing_scalar_mpv)
   return(
     bind_rows(
       rsv_sim %>% mutate(pathogen = "rsv"), 
