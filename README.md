@@ -1,6 +1,6 @@
 # Modeling potential impact of RSV interventions on burden and dynamics of hMPV
 
-The code in this repository can be used to reproduce analysis from Howerton *et al.* (submitted 2024). 
+The code in this repository can be used to reproduce analysis from Howerton *et al.* (*Nature Communications 2025). 
 
 ## File structure and definitions
 * `\data` contains all scripts to run the model and generate the figures
